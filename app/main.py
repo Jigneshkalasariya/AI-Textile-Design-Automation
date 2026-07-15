@@ -4,6 +4,8 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.logger import logger
 from app.api.routes import upload, process, status as job_status, ai_analysis
+from app.core.database import init_db
+from app.services.cloudinary_service import init_cloudinary
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -33,6 +35,8 @@ app.include_router(ai_analysis.router)
 async def startup_event():
     logger.info("Starting up FastAPI application...")
     logger.info(f"Configuration settings loaded successfully. Storage type: {settings.STORAGE_TYPE}")
+    init_db()
+    init_cloudinary()
 
 @app.on_event("shutdown")
 async def shutdown_event():

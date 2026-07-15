@@ -1,0 +1,78 @@
+# How to Run the API, Celery, and Setup the Environment
+
+## 1. Environment Setup (Local Python)
+
+First, ensure you have Python 3.9+ and Redis installed on your system.
+
+```bash
+# Create a virtual environment
+python -m venv venv
+
+# Activate the virtual environment
+# On macOS/Linux:
+source venv/bin/activate
+# On Windows:
+# venv\Scripts\activate
+
+# Install the required dependencies
+pip install -r requirements.txt
+
+# Create your environment variables file
+cp .env.example .env
+```
+*(Make sure to update the `.env` file with any required keys or database URLs if needed).*
+
+## 2. Start Redis Server
+Celery requires a message broker. We use Redis. Make sure Redis is running in the background.
+
+```bash
+# On a new terminal window
+redis-server
+```
+
+## 3. Run the FastAPI Server (API)
+Open a new terminal, activate the virtual environment, and start the API server using Uvicorn.
+
+```bash
+# Activate virtual environment if not already active
+source venv/bin/activate
+
+# Run the API server with hot-reloading enabled
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+The API will be available at `http://localhost:8000`. You can view the interactive documentation at `http://localhost:8000/docs`.
+
+## 4. Run the Celery Worker
+Open another terminal, activate the virtual environment, and start the Celery worker to process background tasks.
+
+```bash
+# Activate virtual environment
+source venv/bin/activate
+
+# Start the Celery worker
+celery -A app.workers.celery_worker.celery_app worker --loglevel=info
+```
+
+## 5. Run Celery Beat (Optional, for scheduled tasks)
+If your application uses scheduled/periodic tasks, you'll also need to run Celery Beat.
+
+```bash
+# Activate virtual environment
+source venv/bin/activate
+
+# Start Celery Beat
+celery -A app.workers.celery_worker.celery_app beat --loglevel=info
+```
+
+---
+
+## Alternative: Using Docker Compose
+If you prefer to run everything using Docker, you can start the entire stack (API, Redis, Celery) with a single command:
+
+```bash
+# Build and run the containers
+docker-compose up --build
+
+# To run in the background (detached mode):
+docker-compose up -d --build
+```

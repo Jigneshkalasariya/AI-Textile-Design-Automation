@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_MODEL: str = "google/gemini-2.0-flash"
 
+    # Database Settings
+    DATABASE_URL: str = "postgresql://postgres:rakesh@localhost:5433/textile_automation?schema=public"
+
+    # Cloudinary Settings
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+
     @property
     def local_storage_path(self) -> Path:
         path = Path(self.LOCAL_STORAGE_DIR)
