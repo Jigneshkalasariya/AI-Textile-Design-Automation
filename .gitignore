@@ -1,0 +1,46 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.cache/
+
+# Environments / Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.backup
+*.env
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+lib/
+lib64/
+bin/
+include/
+share/
+
+# IDE / Editor folders and configuration
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Application-specific generated files and directories
+logs/
+*.log
+output/
+data/sketch_test_runs/
+data/storage/
+
+# Operating System files
+.DS_Store
+Thumbs.db
