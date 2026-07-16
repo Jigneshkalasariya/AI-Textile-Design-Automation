@@ -21,7 +21,7 @@ services:
       - .env
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:rakesh@host.docker.internal:5433/textile_automation?schema=public}
+      - DATABASE_URL=${DATABASE_URL}
       - STORAGE_TYPE=local
       - LOCAL_STORAGE_DIR=/app/data/storage
       - ALLOW_MODEL_DOWNLOADS=false
@@ -43,7 +43,7 @@ services:
       - .env
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:rakesh@host.docker.internal:5433/textile_automation?schema=public}
+      - DATABASE_URL=${DATABASE_URL}
       - STORAGE_TYPE=local
       - LOCAL_STORAGE_DIR=/app/data/storage
       - ALLOW_MODEL_DOWNLOADS=false
@@ -65,7 +65,7 @@ services:
       - .env
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:rakesh@host.docker.internal:5433/textile_automation?schema=public}
+      - DATABASE_URL=${DATABASE_URL}
       - STORAGE_TYPE=local
       - LOCAL_STORAGE_DIR=/app/data/storage
       - ALLOW_MODEL_DOWNLOADS=false
