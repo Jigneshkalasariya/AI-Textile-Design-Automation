@@ -148,21 +148,21 @@ def generate_outputs(
         except Exception as e:
             logger.error(f"Failed to save variant {variant_name}: {e}")
 
-    # Save layer separations if generated
-    layers = pipeline_data.get("layers", [])
-    separated_colors = pipeline_data.get("separated_colors", [])
-    for idx, (layer, color) in enumerate(zip(layers, separated_colors)):
-        try:
-            # Save layers as indexed binary silhouettes
-            hex_color = f"{color[0]:02x}{color[1]:02x}{color[2]:02x}"
-            filename = f"{base_name}_layer_{idx}_{hex_color}.png"
-            buffer = io.BytesIO()
-            layer.save(buffer, format="PNG")
-            storage_service.save_file(file_id, filename, buffer.getvalue())
-            saved_files.append(filename)
-            logger.debug(f"Generated color separation layer: {filename}")
-        except Exception as e:
-            logger.error(f"Failed to save color layer {idx}: {e}")
+    # Storage Optimization: Skip saving individual color layer PNGs to disk/cloud.
+    # layers = pipeline_data.get("layers", [])
+    # separated_colors = pipeline_data.get("separated_colors", [])
+    # for idx, (layer, color) in enumerate(zip(layers, separated_colors)):
+    #     try:
+    #         hex_color = f"{color[0]:02x}{color[1]:02x}{color[2]:02x}"
+    #         filename = f"{base_name}_layer_{idx}_{hex_color}.png"
+    #         buffer = io.BytesIO()
+    #         layer.save(buffer, format="PNG")
+    #         storage_service.save_file(file_id, filename, buffer.getvalue())
+    #         saved_files.append(filename)
+    #         logger.debug(f"Generated color separation layer: {filename}")
+    #     except Exception as e:
+    #         logger.error(f"Failed to save color layer {idx}: {e}")
+    logger.info("Skipping output generation of individual color layers to optimize storage.")
 
     logger.info(f"Output generation completed. Total files written: {len(saved_files)}")
     return saved_files

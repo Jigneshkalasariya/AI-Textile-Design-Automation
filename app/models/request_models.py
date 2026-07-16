@@ -56,7 +56,7 @@ class ColorVariantsConfig(BaseModel):
 
 class OutputGenerationConfig(BaseModel):
     formats: List[str] = Field(
-        default=["PNG", "BMP", "TIFF", "SVG", "PSD"], 
+        default=["PNG", "SVG"], 
         description="Target formats to output"
     )
 

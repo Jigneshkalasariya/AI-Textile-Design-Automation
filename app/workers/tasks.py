@@ -135,7 +135,7 @@ def process_queued_asset(self, asset_id: str, url: str):
             object_detection={"model": "yolo11", "enabled": True},
             inpainting={"enabled": True, "model": "flux"},
             vectorization={"method": "potrace", "enabled": True},
-            cad_engine={"enabled": True, "generate_six_versions": True}
+            cad_engine={"enabled": True, "generate_six_versions": False}
         )
         
         def progress_callback(progress_percent: float, current_step: str, status_msg: str):
