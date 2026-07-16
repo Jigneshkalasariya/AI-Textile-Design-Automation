@@ -24,6 +24,12 @@ def remove_background(img: Image.Image, config: BackgroundRemovalConfig) -> Imag
     if not config.enabled:
         logger.debug("Background removal disabled. Skipping.")
         return img
+        
+    if config.model_name == "sam2" or config.use_grounding_dino:
+        logger.info(f"Attempting background removal using {config.model_name} (Grounding DINO: {config.use_grounding_dino})")
+        # TODO: Integrate real SAM2/Grounding DINO API or local model inference here.
+        # For now, we mock the execution and fallback to rembg/OpenCV so the pipeline doesn't break
+        logger.warning("SAM2/Grounding DINO not natively installed yet. Falling back to next available method for now.")
 
     if REMBG_AVAILABLE and settings.ALLOW_MODEL_DOWNLOADS:
         try:

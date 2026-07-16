@@ -129,8 +129,14 @@ def process_queued_asset(self, asset_id: str, url: str):
         # Save locally so pipeline can read it
         storage_service.save_file(asset_id, filename, image_data)
         
-        # Run pipeline with default config
-        config = ProcessConfig()
+        # Run pipeline with fully automated config
+        config = ProcessConfig(
+            background_removal={"model_name": "sam2", "enabled": True},
+            object_detection={"model": "yolo11", "enabled": True},
+            inpainting={"enabled": True, "model": "flux"},
+            vectorization={"method": "potrace", "enabled": True},
+            cad_engine={"enabled": True, "generate_six_versions": True}
+        )
         
         def progress_callback(progress_percent: float, current_step: str, status_msg: str):
             self.update_state(

@@ -20,6 +20,11 @@ def vectorize_contours(img: Image.Image, config: VectorizationConfig) -> str:
     cv_img = pil_to_cv2(img)
     width, height = img.size
     
+    if config.method == "potrace":
+        logger.info("Using Potrace for Bezier curve generation.")
+        # TODO: integrate pypotrace or CLI potrace
+        logger.warning("Potrace not natively installed. Falling back to OpenCV contour vectorization.")
+    
     # 1. Convert to grayscale and threshold
     if len(cv_img.shape) == 3:
         if cv_img.shape[2] == 4:

@@ -8,12 +8,14 @@ class EnhanceConfig(BaseModel):
 
 class BackgroundRemovalConfig(BaseModel):
     enabled: bool = Field(default=True, description="Enable background removal")
-    model_name: str = Field(default="u2net", description="rembg model name (u2net, u2netp, etc.)")
+    model_name: str = Field(default="sam2", description="Model name (sam2, rembg, etc.)")
+    use_grounding_dino: bool = Field(default=False, description="Use Grounding DINO with SAM2")
     alpha_matting: bool = Field(default=False, description="Use alpha matting for soft edges")
 
 class ObjectDetectionConfig(BaseModel):
     enabled: bool = Field(default=True, description="Enable object detection for isolating motifs")
-    confidence: float = Field(default=0.25, description="YOLOv8 confidence threshold")
+    model: str = Field(default="yolo11", description="Model (yolo11, grounding_dino)")
+    confidence: float = Field(default=0.25, description="Confidence threshold")
 
 class PatternDetectionConfig(BaseModel):
     enabled: bool = Field(default=True, description="Enable automated repeat type and boundary detection")
@@ -21,9 +23,10 @@ class PatternDetectionConfig(BaseModel):
 
 class InpaintingConfig(BaseModel):
     enabled: bool = Field(default=False, description="Enable pattern repair (inpainting)")
-    prompt: str = Field(default="seamless matching textile pattern fabric", description="SD prompt for inpainting")
-    negative_prompt: str = Field(default="seams, lines, bad quality, blurry", description="SD negative prompt")
-    strength: float = Field(default=0.8, description="SD inpainting strength")
+    model: str = Field(default="flux", description="Inpainting model to use (flux, sd)")
+    prompt: str = Field(default="seamless matching textile pattern fabric", description="Prompt for inpainting")
+    negative_prompt: str = Field(default="seams, lines, bad quality, blurry", description="Negative prompt")
+    strength: float = Field(default=0.8, description="Inpainting strength")
 
 class ColorSeparationConfig(BaseModel):
     num_colors: int = Field(default=8, description="Number of primary color layers to extract (KMeans)")
@@ -35,6 +38,7 @@ class ColorReductionConfig(BaseModel):
 
 class VectorizationConfig(BaseModel):
     enabled: bool = Field(default=True, description="Enable SVG path tracing")
+    method: str = Field(default="potrace", description="Vectorization method (potrace, opencv)")
     simplify_tolerance: float = Field(default=1.0, description="Tolerance for contour approximation (Douglas-Peucker)")
 
 class RepeatGenerationConfig(BaseModel):

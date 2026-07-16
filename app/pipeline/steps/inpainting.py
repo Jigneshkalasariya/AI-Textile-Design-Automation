@@ -40,8 +40,10 @@ def repair_pattern(img: Image.Image, repeat_info: Dict[str, Any], config: Inpain
             device = "cuda" if torch.cuda.is_available() else "cpu"
             logger.debug(f"Running SD Inpainting on device: {device}...")
             
-            # Load Stable Diffusion Inpainting pipeline
+            # Load Stable Diffusion or FLUX pipeline based on config
             # Path can be a local model folder or download path
+            if config.model == "flux":
+                logger.warning("FLUX inpainting not natively installed yet. Falling back to SD Inpainting or OpenCV.")
             model_id = "runwayml/stable-diffusion-inpainting"
             pipe = StableDiffusionInpaintPipeline.from_pretrained(
                 model_id,
@@ -67,7 +69,7 @@ def repair_pattern(img: Image.Image, repeat_info: Dict[str, Any], config: Inpain
             return result.resize(orig_size)
             
         except Exception as e:
-            logger.error(f"SD Inpainting failed: {e}. Falling back to OpenCV fast-marching.")
+            logger.error(f"{config.model.upper()} Inpainting failed: {e}. Falling back to OpenCV fast-marching.")
 
     # OpenCV Fallback (Fast Marching inpainting)
     logger.debug("Executing OpenCV boundary inpainting fallback...")

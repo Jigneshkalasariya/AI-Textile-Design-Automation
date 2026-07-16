@@ -29,13 +29,17 @@ def detect_objects(img: Image.Image, config: ObjectDetectionConfig) -> Tuple[Lis
         logger.debug("Object detection disabled. Returning single motif (the full image).")
         return [img], [{"x": 0, "y": 0, "w": img.width, "h": img.height}]
 
-    # YOLOv8 implementation
-    if YOLO_AVAILABLE and settings.ALLOW_MODEL_DOWNLOADS:
+    # YOLO / Grounding DINO implementation
+    if config.model == "grounding_dino":
+        logger.warning("Grounding DINO not natively installed yet. Falling back to next available method.")
+    
+    if YOLO_AVAILABLE and settings.ALLOW_MODEL_DOWNLOADS and (config.model == "yolo11" or config.model == "yolov8"):
         try:
-            logger.debug(f"Instantiating YOLOv8 detector with confidence threshold: {config.confidence}")
-            # Load default YOLOv8 nano model (yolov8n.pt will auto-download to MODEL_PATHS_DIR)
-            model_path = settings.model_paths_path / "yolov8n.pt"
-            model = YOLO(str(model_path) if model_path.exists() else "yolov8n.pt")
+            logger.debug(f"Instantiating {config.model} detector with confidence threshold: {config.confidence}")
+            # Ensure correct model string
+            model_name = "yolo11n.pt" if config.model == "yolo11" else "yolov8n.pt"
+            model_path = settings.model_paths_path / model_name
+            model = YOLO(str(model_path) if model_path.exists() else model_name)
             
             # Run inference
             results = model(img, conf=config.confidence)
@@ -55,12 +59,12 @@ def detect_objects(img: Image.Image, config: ObjectDetectionConfig) -> Tuple[Lis
                         motifs.append(cropped)
             
             if motifs:
-                logger.info(f"YOLOv8 detected {len(motifs)} objects/motifs.")
+                logger.info(f"{config.model} detected {len(motifs)} objects/motifs.")
                 return motifs, bboxes
             else:
-                logger.debug("YOLOv8 found 0 items. Falling back to contour analysis.")
+                logger.debug(f"{config.model} found 0 items. Falling back to contour analysis.")
         except Exception as e:
-            logger.error(f"YOLOv8 inference failed: {e}. Falling back to OpenCV contour-based isolation.")
+            logger.error(f"{config.model} inference failed: {e}. Falling back to OpenCV contour-based isolation.")
 
     # Fallback OpenCV contour detection (Uses Alpha channel if present, otherwise thresholding)
     logger.debug("Executing OpenCV contour detection fallback...")
