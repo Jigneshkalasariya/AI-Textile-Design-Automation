@@ -23,11 +23,24 @@ def generate_repeat(img: Image.Image, repeat_info: Dict[str, Any], config: Repea
     # Crop the image to the actual detected repeat unit size
     tile = img.crop((0, 0, repeat_w, repeat_h))
     
-    # Calculate output canvas dimensions
-    canvas_w = cols * repeat_w
+    import math
+    
+    # Calculate output canvas dimensions dynamically to prevent tiny outputs
+    min_canvas_w = max(1500, img.width)
+    min_canvas_h = max(1500, img.height)
+    
+    # Dynamically increase cols/rows if the repeat unit is small
+    dynamic_cols = max(cols, math.ceil(min_canvas_w / repeat_w))
+    dynamic_rows = max(rows, math.ceil(min_canvas_h / repeat_h))
+    
+    canvas_w = dynamic_cols * repeat_w
     # For half-drop, we need a bit of extra vertical space to handle the shifts
     extra_h = (repeat_h // 2) if repeat_type == "half-drop" else 0
-    canvas_h = rows * repeat_h + extra_h
+    canvas_h = dynamic_rows * repeat_h + extra_h
+    
+    # Update loop boundaries for drawing
+    cols = dynamic_cols
+    rows = dynamic_rows
     
     # Create output canvas matching the source image mode (RGB, RGBA, P, etc.)
     canvas = Image.new(img.mode, (canvas_w, canvas_h))

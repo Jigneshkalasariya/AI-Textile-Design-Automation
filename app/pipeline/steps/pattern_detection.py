@@ -82,15 +82,18 @@ def detect_pattern(img: Image.Image, config: PatternDetectionConfig) -> Dict[str
         est_h = height
         repeat_type = "straight"
         
+        # Enforce minimum size to prevent micro-texture cropping (e.g. 250px or 25% of image)
+        min_repeat_dim = max(250, min(width, height) // 4)
+        
         if x_diffs:
             # Get median of differences
             median_dx = int(np.median(x_diffs))
-            if 30 < median_dx < width:
+            if min_repeat_dim < median_dx < width:
                 est_w = median_dx
         
         if y_diffs:
             median_dy = int(np.median(y_diffs))
-            if 30 < median_dy < height:
+            if min_repeat_dim < median_dy < height:
                 est_h = median_dy
 
         # Check for half-drop match
