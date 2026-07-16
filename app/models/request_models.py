@@ -98,75 +98,59 @@ Correct perspective distortion
 Fix skew and alignment
 Ensure repeat boundaries remain intact
 Maintain original proportions
-🎨 3. COLOR RESTORATION
+🎨 3. COLOR & DETAIL ENHANCEMENT
 Restore faded colors (LAB color space preferred)
-Normalize contrast
-Balance brightness
-Preserve original color intent
-🔍 4. DETAIL ENHANCEMENT
-Increase resolution (2x–4x upscale)
+Normalize contrast and brightness
 Remove blur
-Improve sharpness
-Preserve micro details
-Enhance fine textures
-✏️ 5. EDGE & LINE OPTIMIZATION
+Apply controlled sharpening
+Preserve fine details and textures
+✏️ 4. EDGE & LINE OPTIMIZATION
 Strengthen line clarity
 Smooth jagged edges
 Maintain natural curves
 Produce crisp, clean boundaries
 
-🖤 ADDITIONAL OUTPUT (MANDATORY)
-Black & White Sketch Design
+📦 OUTPUT VARIANTS (GENERATE ALL)
+1. MASTER ENHANCED IMAGE
+High-quality processed version of original artwork
 
-Generate a separate output with:
+2. BLACK & WHITE SKETCH OUTPUT
 Pure black lines on white background
 No grayscale (binary or near-binary)
-High edge fidelity
-Clean continuous strokes
-No loss of motif or repeat structure
+High edge accuracy
+Preserve motifs and repeat structure
 Textile CAD-friendly line thickness
 
-📦 OUTPUT VARIANTS (GENERATE ALL)
-Version 1: Balanced Restoration
-Natural enhancement
-No aggressive sharpening
-Version 2: Maximum Sharpness
-Strong edge clarity
-High-detail enhancement
-Version 3: Print Optimized
-CMYK-safe tones
-Controlled contrast
-Color stability for fabric printing
-Version 4: Vectorization Optimized
-Flat regions
-Clean edges
-Reduced noise for tracing
-Version 5: Repeat Detection Optimized
-Highlight repeat clarity
-Seamless tiling preservation
-Version 6: Texcelle Import Optimized
-Perfect flat bitmap
-Clean boundaries
-CAD-ready precision
+3. COLOR VARIANT A (SOFT ENHANCED)
+Natural textile-friendly tones
+Balanced contrast
+Subtle visual improvement
+
+4. COLOR VARIANT B (VIBRANT ENHANCED)
+Rich and enhanced colors
+Higher contrast
+Visually appealing while preserving design
 
 📁 EXPORT REQUIREMENTS
-For EACH version + sketch:
-Format: BMP
+For ALL outputs:
+Format: BMP and PNG (both required)
 DPI: 600
-Compression: None (Lossless)
+BMP: No compression (lossless)
+PNG: Lossless compression
 Quality: Maximum
-Resolution: High (minimum 4K or upscaled)
+Resolution: High (after upscale)
 Background: Clean and uniform
 
 📤 OUTPUT STRUCTURE
 /output/
-   v1_balanced.bmp
-   v2_sharp.bmp
-   v3_print.bmp
-   v4_vector.bmp
-   v5_repeat.bmp
-   v6_texcelle.bmp
-   sketch_bw.bmp"""
+   master_enhanced.bmp
+   master_enhanced.png
+   sketch_bw.bmp
+   sketch_bw.png
+   color_variant_soft.bmp
+   color_variant_soft.png
+   color_variant_vibrant.bmp
+   color_variant_vibrant.png"""
 
 class TextileCADEngineConfig(BaseModel):
     enabled: bool = Field(default=True, description="Enable Textile CAD Preprocessing Engine")

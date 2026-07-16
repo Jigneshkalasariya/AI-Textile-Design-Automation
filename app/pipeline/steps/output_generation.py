@@ -85,7 +85,7 @@ def generate_outputs(
         output_dir = Path(__file__).resolve().parents[3] / "output"
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Map version keys to output folder short names
+        # Map version keys to output folder short names (legacy)
         output_mappings = {
             "version1": "v1_balanced.bmp",
             "version2": "v2_sharp.bmp",
@@ -96,16 +96,21 @@ def generate_outputs(
             "sketch_bw": "sketch_bw.bmp"
         }
         
+        # Define the exact names of versions to save in the job storage
+        version_names = {
+            "version1": "version1_balanced_restoration",
+            "version2": "version2_maximum_sharpness",
+            "version3": "version3_print_optimized",
+            "version4": "version4_vectorization_optimized",
+            "version5": "version5_repeat_detection_optimized",
+            "version6": "version6_texcelle_import_optimized",
+            "sketch_bw": "sketch_bw",
+            "master_enhanced": "master_enhanced",
+            "color_variant_soft": "color_variant_soft",
+            "color_variant_vibrant": "color_variant_vibrant"
+        }
+        
         for version_key, version_img in cad_versions.items():
-            version_names = {
-                "version1": "version1_balanced_restoration",
-                "version2": "version2_maximum_sharpness",
-                "version3": "version3_print_optimized",
-                "version4": "version4_vectorization_optimized",
-                "version5": "version5_repeat_detection_optimized",
-                "version6": "version6_texcelle_import_optimized",
-                "sketch_bw": "sketch_bw"
-            }
             version_name = version_names.get(version_key, version_key)
             
             # Export as PNG and BMP to standard storage
@@ -131,9 +136,37 @@ def generate_outputs(
                 short_path = output_dir / short_name
                 try:
                     version_img.convert("RGB").save(short_path, format="BMP", dpi=(600, 600))
-                    logger.info(f"Saved exact prompt required output: {short_path} (600 DPI BMP)")
+                    logger.info(f"Saved legacy CAD output: {short_path} (600 DPI BMP)")
                 except Exception as e:
-                    logger.error(f"Failed to save short name version output {short_name}: {e}")
+                    logger.error(f"Failed to save legacy CAD output {short_name}: {e}")
+
+        # Export the 4 REQUIRED outputs to the top-level /output/ folder in both BMP and PNG formats
+        required_outputs = {
+            "master_enhanced": "master_enhanced",
+            "sketch_bw": "sketch_bw",
+            "color_variant_soft": "color_variant_soft",
+            "color_variant_vibrant": "color_variant_vibrant"
+        }
+
+        for req_key, req_name in required_outputs.items():
+            if req_key in cad_versions:
+                version_img = cad_versions[req_key]
+                
+                # 1. Export as BMP to /output/
+                bmp_path = output_dir / f"{req_name}.bmp"
+                try:
+                    version_img.convert("RGB").save(bmp_path, format="BMP", dpi=(600, 600))
+                    logger.info(f"Saved required CAD output: {bmp_path} (600 DPI BMP)")
+                except Exception as e:
+                    logger.error(f"Failed to save required BMP output {req_name}: {e}")
+                
+                # 2. Export as PNG to /output/
+                png_path = output_dir / f"{req_name}.png"
+                try:
+                    version_img.convert("RGBA").save(png_path, format="PNG", optimize=True, dpi=(600, 600))
+                    logger.info(f"Saved required CAD output: {png_path} (600 DPI PNG)")
+                except Exception as e:
+                    logger.error(f"Failed to save required PNG output {req_name}: {e}")
 
     # Save colorways if generated
     variants = pipeline_data.get("variants", {})
