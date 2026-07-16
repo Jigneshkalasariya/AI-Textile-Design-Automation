@@ -130,12 +130,14 @@ def process_queued_asset(self, asset_id: str, url: str):
         storage_service.save_file(asset_id, filename, image_data)
         
         # Run pipeline with fully automated config
+        # We disable background_removal because it destroys textile base colors (like Saree red backgrounds)
+        # We disable cad_engine because perspective warping can ruin border designs
         config = ProcessConfig(
-            background_removal={"model_name": "sam2", "enabled": True},
+            background_removal={"model_name": "sam2", "enabled": False},
             object_detection={"model": "yolo11", "enabled": True},
             inpainting={"enabled": True, "model": "flux"},
             vectorization={"method": "potrace", "enabled": True},
-            cad_engine={"enabled": True, "generate_six_versions": False}
+            cad_engine={"enabled": False, "generate_six_versions": False}
         )
         
         def progress_callback(progress_percent: float, current_step: str, status_msg: str):
