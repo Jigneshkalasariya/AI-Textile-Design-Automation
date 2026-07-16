@@ -16,16 +16,16 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # Celery & Redis Settings
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str
     CELERY_ENABLED: bool = True
 
     # Storage Settings
     STORAGE_TYPE: Literal["local", "s3"] = "local"
     LOCAL_STORAGE_DIR: str = "./data/storage"
-    S3_BUCKET: str = "my-textile-bucket"
-    AWS_ACCESS_KEY_ID: str = "mock_key_id"
-    AWS_SECRET_ACCESS_KEY: str = "mock_secret_key"
-    AWS_ENDPOINT_URL: str = "https://s3.amazonaws.com"
+    S3_BUCKET: str = ""
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_ENDPOINT_URL: str = ""
 
     # Model Settings
     MODEL_PATHS_DIR: str = "./data/models"
@@ -36,12 +36,12 @@ class Settings(BaseSettings):
     OPENROUTER_MODEL: str = "google/gemini-2.0-flash"
 
     # Database Settings
-    DATABASE_URL: str = "postgresql://postgres:rakesh@localhost:5433/textile_automation?schema=public"
+    DATABASE_URL: str
 
     # Cloudinary Settings
-    CLOUDINARY_CLOUD_NAME: str = ""
-    CLOUDINARY_API_KEY: str = ""
-    CLOUDINARY_API_SECRET: str = ""
+    CLOUDINARY_CLOUD_NAME: str
+    CLOUDINARY_API_KEY: str
+    CLOUDINARY_API_SECRET: str
 
     @property
     def local_storage_path(self) -> Path:
