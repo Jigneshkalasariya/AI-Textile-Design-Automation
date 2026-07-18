@@ -19,7 +19,7 @@ from app.pipeline.steps.color_reduction import reduce_colors
 from app.pipeline.steps.vectorization import vectorize_contours
 from app.pipeline.steps.repeat_generation import generate_repeat
 from app.pipeline.steps.color_variants import generate_color_variants
-from app.pipeline.steps.output_generation import generate_outputs
+from app.pipeline.steps.output_generation import generate_cad_outputs, generate_outputs
 
 class PipelineService:
     @staticmethod
@@ -45,7 +45,11 @@ class PipelineService:
         # 0. Load source image from storage
         update_progress(0.0, "load_input", "Loading input image from storage...")
         local_input_path = storage_service.get_local_path(file_id, filename)
-        current_img = Image.open(local_input_path).convert("RGB")
+        with Image.open(local_input_path) as source_img:
+            # Applying EXIF orientation would rotate or mirror the source canvas.
+            # Pixel order and dimensions are therefore loaded exactly as encoded.
+            current_img = source_img.convert("RGB").copy()
+        source_size = current_img.size
         
         # Keep track of outputs to return
         pipeline_data = {
@@ -55,12 +59,30 @@ class PipelineService:
 
         # Step 1: Image Enhancement
         if config.cad_engine.enabled:
-            update_progress(5.0, "cad_preprocessing", "Running Textile CAD Preprocessing (6 versions)...")
+            update_progress(5.0, "cad_preprocessing", "Running Textile CAD preprocessing...")
             from app.pipeline.steps.cad_engine import preprocess_image_cad
             cad_versions = preprocess_image_cad(current_img, config.cad_engine)
             pipeline_data["cad_versions"] = cad_versions
-            if "version1" in cad_versions:
-                current_img = cad_versions["version1"]
+            if config.cad_only:
+                update_progress(
+                    90.0,
+                    "output_generation",
+                    "Writing and validating eight Texcelle output files...",
+                )
+                saved_files = generate_cad_outputs(
+                    file_id=file_id,
+                    cad_versions=cad_versions,
+                    source_size=source_size,
+                    dpi=config.cad_engine.dpi,
+                )
+                update_progress(100.0, "complete", "Texcelle processing completed successfully.")
+                return {
+                    "status": "SUCCESS",
+                    "saved_files": saved_files,
+                }
+            current_img = cad_versions["master_enhanced"]
+        elif config.cad_only:
+            raise ValueError("cad_engine.enabled must be true when cad_only is enabled")
 
         update_progress(10.0, "enhance", "Enhancing image (denoising and sharpening)...")
         enhanced_img = enhance_image(current_img, config.enhance)

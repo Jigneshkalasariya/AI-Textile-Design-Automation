@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, HTTPException, status, BackgroundTasks, Body
 from app.models.request_models import ProcessConfig
 from app.models.response_models import JobSubmitResponse
 from app.services.storage_service import storage_service
@@ -7,7 +7,7 @@ from app.utils.file_utils import is_allowed_file
 from app.services.queue_service import queue_service
 from app.core.config import settings
 from app.core.logger import logger
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 router = APIRouter(prefix="/api")
 
@@ -64,14 +64,19 @@ def run_local_pipeline_job(job_id: str, filename: str, config_dict: Dict[str, An
     "/process/{file_id}",
     response_model=JobSubmitResponse,
     status_code=status.HTTP_202_ACCEPTED,
-    summary="Trigger processing pipeline",
-    description="Starts the asynchronous 11-step textile design processing pipeline for the uploaded file ID."
+    summary="Process an uploaded textile image",
+    description=(
+        "Uses the original image already stored under file_id. By default, generates "
+        "the eight dimension-preserving Textile CAD/Texcelle BMP and PNG outputs."
+    ),
 )
 async def process_image(
-    file_id: str, 
-    config: ProcessConfig, 
-    background_tasks: BackgroundTasks
+    file_id: str,
+    background_tasks: BackgroundTasks,
+    config: Optional[ProcessConfig] = Body(default=None),
 ) -> JobSubmitResponse:
+    config = config or ProcessConfig()
+
     # 1. Locate original file
     files = storage_service.list_files(file_id)
     if not files:
@@ -80,11 +85,35 @@ async def process_image(
             detail=f"No uploaded files found for ID {file_id}"
         )
     
-    # Filter to find the input image file (e.g. not intermediate outputs)
-    # The first uploaded file matches
+    # Filter generated artifacts so rerunning a file_id always starts from the
+    # original uploaded source rather than from a previous generated variant.
+    generated_names = {
+        "master_enhanced.bmp",
+        "master_enhanced.png",
+        "sketch_bw.bmp",
+        "sketch_bw.png",
+        "color_variant_soft.bmp",
+        "color_variant_soft.png",
+        "color_variant_vibrant.bmp",
+        "color_variant_vibrant.png",
+    }
+    generated_markers = (
+        "_repeat",
+        "_layer_",
+        "colorway_",
+        "_master_enhanced",
+        "_sketch_bw",
+        "_color_variant_",
+        "_version",
+    )
     original_file = None
     for f in files:
-        if is_allowed_file(f) and not ("_repeat" in f or "_layer_" in f or "colorway_" in f):
+        lower_name = f.lower()
+        if (
+            is_allowed_file(f)
+            and lower_name not in generated_names
+            and not any(marker in lower_name for marker in generated_markers)
+        ):
             original_file = f
             break
             

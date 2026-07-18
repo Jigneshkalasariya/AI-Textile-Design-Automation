@@ -256,105 +256,61 @@ def generate_bw_sketch(cv_img: np.ndarray) -> np.ndarray:
 
 def preprocess_image_cad(img: Image.Image, config: TextileCADEngineConfig) -> Dict[str, Image.Image]:
     """
-    Step: Textile CAD Preprocessing Engine.
-    Executes the automatic perspective correction, denoising, sharpening, color restoration, 
-    and returns required preprocessed versions of the artwork + B&W sketch design.
+    Generate the four production Texcelle variants from the uploaded source.
+
+    Every variant starts from the source pixels, and no operation is allowed to
+    alter the source canvas dimensions or geometry.
     """
     logger.info("Running Step: Textile CAD Preprocessing Engine")
-    
-    # 0. Convert PIL image to OpenCV BGR
-    cv_orig = pil_to_cv2(img)
-    
-    # STEP 1: IMAGE QUALITY VALIDATION (MANDATORY FIRST)
-    is_low_quality = analyze_image_quality(cv_orig)
-    if is_low_quality:
-        logger.info("Quality validation: Low quality artwork. Applying upscale & super-resolution simulation...")
-        cv_master = upscale_and_enhance_sr(cv_orig)
-    else:
-        logger.info("Quality validation: High quality artwork. Keeping original resolution.")
-        cv_master = cv_orig.copy()
-        
-    # STEP 2: CLEANING
-    logger.info("Running Step 2: Cleaning")
-    # Clean noise, scan lines, dust and artifacts
-    cv_cleaned = remove_defects_and_noise(cv_master, strength=2.5)
-    
-    # STEP 3: GEOMETRY CORRECTION
-    logger.info("Running Step 3: Geometry Correction")
-    # Correct perspective distortion, skew, align repeat borders
-    cv_rectified = correct_perspective(cv_cleaned)
-    
-    versions = {}
-    
-    # STEP 4 & 5: COLOR, DETAIL & LINE ENHANCEMENT
-    logger.info("Running Step 4 & 5: Color, Detail & Line Enhancement")
-    
-    # 1. MASTER ENHANCED IMAGE
-    logger.debug("Generating CAD Output: master_enhanced (Balanced Restoration)")
-    v1_cv = cv_rectified.copy()
-    v1_cv = restore_colors(v1_cv, sat_scale=1.1, clip_limit=2.0)
-    v1_cv = sharpen_image(v1_cv, strength=0.8)
-    v1_cv = enhance_edges(v1_cv, alpha=0.15)
-    versions["master_enhanced"] = cv2_to_pil(v1_cv)
-    versions["version1"] = versions["master_enhanced"] # Backward compatibility mapping
-    
-    # 2. BLACK & WHITE SKETCH OUTPUT
-    logger.debug("Generating CAD Output: sketch_bw")
-    sketch_cv = generate_bw_sketch(cv_rectified)
-    versions["sketch_bw"] = cv2_to_pil(sketch_cv)
-    
-    # 3. COLOR VARIANT A (SOFT ENHANCED)
-    logger.debug("Generating CAD Output: color_variant_soft")
-    soft_cv = cv_rectified.copy()
-    soft_cv = remove_defects_and_noise(soft_cv, strength=1.5)
-    soft_cv = restore_colors(soft_cv, sat_scale=1.02, clip_limit=1.2)
-    soft_cv = sharpen_image(soft_cv, strength=0.5)
-    versions["color_variant_soft"] = cv2_to_pil(soft_cv)
-    versions["version3"] = versions["color_variant_soft"] # Backward compatibility mapping
-    
-    # 4. COLOR VARIANT B (VIBRANT ENHANCED)
-    logger.debug("Generating CAD Output: color_variant_vibrant")
-    vibrant_cv = cv_rectified.copy()
-    vibrant_cv = remove_defects_and_noise(vibrant_cv, strength=2.0)
-    vibrant_cv = restore_colors(vibrant_cv, sat_scale=1.25, clip_limit=3.0)
-    vibrant_cv = sharpen_image(vibrant_cv, strength=1.2)
-    vibrant_cv = enhance_edges(vibrant_cv, alpha=0.2)
-    versions["color_variant_vibrant"] = cv2_to_pil(vibrant_cv)
-    versions["version2"] = versions["color_variant_vibrant"] # Backward compatibility mapping
-    
-    # --- Other backward compatibility versions (Version 4, 5, 6) ---
-    logger.debug("Generating CAD Version 4: Vectorization optimized")
-    v4_cv = remove_defects_and_noise(cv_rectified, strength=5.0)
-    v4_cv = restore_colors(v4_cv, sat_scale=1.2, clip_limit=2.0)
-    v4_cv = sharpen_image(v4_cv, strength=1.5)
-    versions["version4"] = cv2_to_pil(v4_cv)
-    
-    logger.debug("Generating CAD Version 5: Repeat detection optimized")
-    v5_cv = remove_defects_and_noise(cv_rectified, strength=2.0)
-    if len(v5_cv.shape) == 3:
-        yuv = cv2.cvtColor(v5_cv, cv2.COLOR_BGR2YUV)
-        y, u, v = cv2.split(yuv)
-        y_eq = cv2.equalizeHist(y)
-        v5_cv = cv2.cvtColor(cv2.merge((y_eq, u, v)), cv2.COLOR_YUV2BGR)
-    else:
-        v5_cv = cv2.equalizeHist(v5_cv)
-    v5_cv = sharpen_image(v5_cv, strength=1.2)
-    versions["version5"] = cv2_to_pil(v5_cv)
-    
-    logger.debug("Generating CAD Version 6: Texcelle import optimized")
-    v6_cv = remove_defects_and_noise(cv_rectified, strength=3.0)
-    v6_cv = restore_colors(v6_cv, sat_scale=1.1, clip_limit=2.0)
-    v6_cv = sharpen_image(v6_cv, strength=1.0)
-    v6_pil = cv2_to_pil(v6_cv)
-    
-    # Flat color quantization (reduce to 32 flat color palette for engraving standard)
-    quantized_v6 = v6_pil.convert("RGB").quantize(
-        colors=32,
-        method=Image.Quantize.MEDIANCUT,
-        dither=Image.Dither.NONE
-    ).convert("RGB")
-    versions["version6"] = quantized_v6
-    
-    logger.info("Generated all Textile CAD image versions + sketch successfully.")
+
+    source = pil_to_cv2(img.convert("RGB"))
+    original_height, original_width = source.shape[:2]
+
+    def clean_source(strength: float) -> np.ndarray:
+        # A small bilateral filter suppresses compression noise while retaining
+        # thin contours. Morphology is intentionally avoided because it can
+        # move or delete legitimate textile details.
+        diameter = 3 if strength <= 1.5 else 5
+        sigma = 8.0 * strength
+        return cv2.bilateralFilter(source.copy(), diameter, sigma, sigma)
+
+    def finalize_color(cv_img: np.ndarray) -> Image.Image:
+        if cv_img.shape[:2] != (original_height, original_width):
+            raise ValueError("CAD processing changed the source pixel dimensions")
+        return cv2_to_pil(cv_img).convert("RGB")
+
+    logger.debug("Generating independent CAD output: master_enhanced")
+    master = clean_source(1.5)
+    master = restore_colors(master, sat_scale=1.05, clip_limit=1.35)
+    master = sharpen_image(master, strength=0.35)
+
+    logger.debug("Generating independent CAD output: sketch_bw")
+    sketch = generate_bw_sketch(source.copy())
+    if sketch.shape != (original_height, original_width):
+        raise ValueError("Sketch processing changed the source pixel dimensions")
+    sketch_pil = Image.fromarray(sketch, mode="L")
+    # Enforce the binary contract even if an upstream OpenCV operation changes.
+    sketch_pil = sketch_pil.point(lambda value: 255 if value >= 128 else 0, mode="1")
+
+    logger.debug("Generating independent CAD output: color_variant_soft")
+    soft = clean_source(1.0)
+    soft = restore_colors(soft, sat_scale=1.01, clip_limit=1.15)
+    soft = sharpen_image(soft, strength=0.2)
+
+    logger.debug("Generating independent CAD output: color_variant_vibrant")
+    vibrant = clean_source(1.5)
+    vibrant = restore_colors(vibrant, sat_scale=1.15, clip_limit=1.75)
+    vibrant = sharpen_image(vibrant, strength=0.45)
+
+    versions = {
+        "master_enhanced": finalize_color(master),
+        "sketch_bw": sketch_pil,
+        "color_variant_soft": finalize_color(soft),
+        "color_variant_vibrant": finalize_color(vibrant),
+    }
+    logger.info(
+        f"Generated four Textile CAD variants at original dimensions "
+        f"{original_width}x{original_height}"
+    )
     return versions
 

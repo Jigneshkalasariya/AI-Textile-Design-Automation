@@ -33,7 +33,8 @@ class Settings(BaseSettings):
 
     # OpenRouter Settings
     OPENROUTER_API_KEY: str = ""
-    OPENROUTER_MODEL: str = "openai/gpt-4o"
+    OPENROUTER_MODEL: str = "google/gemini-2.5-flash"
+    OPENROUTER_MAX_TOKENS: int = 4096
 
     # Database Settings
     DATABASE_URL: str

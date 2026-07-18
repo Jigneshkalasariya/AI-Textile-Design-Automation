@@ -16,7 +16,7 @@ class OpenRouterService:
 
     @property
     def default_model(self) -> str:
-        return settings.OPENROUTER_MODEL or "google/gemini-2.0-flash"
+        return settings.OPENROUTER_MODEL or "google/gemini-2.5-flash"
 
     def _get_headers(self) -> Dict[str, str]:
         if not self.api_key or self.api_key == "your_openrouter_api_key_here":
@@ -38,7 +38,8 @@ class OpenRouterService:
         headers = self._get_headers()
         payload = {
             "model": target_model,
-            "messages": messages
+            "messages": messages,
+            "max_tokens": settings.OPENROUTER_MAX_TOKENS,
         }
         
         logger.info(f"Sending request to OpenRouter using model: {target_model}")

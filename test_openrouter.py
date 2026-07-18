@@ -20,7 +20,7 @@ class TestOpenRouterIntegration(unittest.TestCase):
     def test_settings_loading(self):
         """Verify OpenRouter configurations are loaded correctly."""
         self.assertIsNotNone(settings.OPENROUTER_MODEL)
-        self.assertEqual(settings.OPENROUTER_MODEL, "google/gemini-2.0-flash")
+        self.assertEqual(settings.OPENROUTER_MODEL, "google/gemini-2.5-flash")
 
     def test_headers_fails_without_key(self):
         """Verify headers build raises ValueError if API Key is placeholder or missing."""
@@ -76,7 +76,28 @@ class TestOpenRouterIntegration(unittest.TestCase):
         called_args, called_kwargs = mock_client.post.call_args
         self.assertEqual(called_args[0], "https://openrouter.ai/api/v1/chat/completions")
         self.assertEqual(called_kwargs["headers"]["Authorization"], "Bearer valid_mock_key")
-        self.assertEqual(called_kwargs["json"]["model"], "google/gemini-2.0-flash")
+        self.assertEqual(called_kwargs["json"]["model"], "google/gemini-2.5-flash")
+        self.assertEqual(called_kwargs["json"]["max_tokens"], 4096)
+
+    @patch('httpx.Client')
+    def test_model_override_uses_openrouter(self, mock_client_class):
+        """Verify a requested OpenRouter model is sent to OpenRouter unchanged."""
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"choices": []}
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value.__enter__.return_value = mock_client
+
+        settings.OPENROUTER_API_KEY = "valid_mock_key"
+        OpenRouterService().call_chat_completion(
+            [{"role": "user", "content": "Hello"}],
+            model="openrouter/auto",
+        )
+
+        called_args, called_kwargs = mock_client.post.call_args
+        self.assertEqual(called_args[0], "https://openrouter.ai/api/v1/chat/completions")
+        self.assertEqual(called_kwargs["json"]["model"], "openrouter/auto")
 
     @patch('httpx.Client')
     def test_mock_design_analysis(self, mock_client_class):

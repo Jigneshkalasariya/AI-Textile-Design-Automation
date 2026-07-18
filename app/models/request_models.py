@@ -60,105 +60,37 @@ class OutputGenerationConfig(BaseModel):
         description="Target formats to output"
     )
 
-DEFAULT_CAD_PROMPT = """🚀 ANTIGRAVITY TEXTILE CAD PREPROCESSING PROMPT (FINAL VERSION)
+DEFAULT_CAD_PROMPT = """TEXTILE CAD AND TEXCELLE IMAGE PREPROCESSING ENGINE
 
-You are a professional Textile CAD image preprocessing engine designed for production-ready Texcelle import pipelines.
+Process the uploaded textile artwork into production-ready Texcelle files without changing its design identity.
 
-Your task is to enhance and clean customer artwork without altering its original design identity.
+Every output must have exactly the same pixel width, pixel height, aspect ratio, orientation, crop, and canvas boundaries as the uploaded image. Do not upscale, downscale, crop, extend, tile, rotate, or recompose the artwork.
 
-🔒 STRICT PRESERVATION RULES (MANDATORY)
+Preserve every motif, flower, leaf, ornament, border, curve, outline, internal line, relative position, spacing, proportion, symmetry, repeat boundary, edge continuity, legitimate background, fine detail, texture, original color identity, and palette relationship.
 
-You MUST preserve exactly:
-Every motif
-Every flower
-Every border
-Every curve
-Every line
-Every color (only restore, do NOT change palette)
-Every texture
-Overall composition
-Repeat boundaries
+Never add, invent, remove, regenerate, redesign, stylize, move, duplicate, or hallucinate design content. Never change motif geometry, repeat structure, or legitimate design backgrounds. Do not add grids, labels, watermarks, shadows, frames, or text.
 
-You MUST NOT:
-Add new elements
-Remove any design part
-Distort repeat structure
-Modify textile geometry
-Stylize or redesign artwork
+Use the original uploaded image as the independent source for every output. Apply conservative edge-preserving cleaning only to defects that are clearly not artwork. Preserve geometry and canvas dimensions. Restore faded colors with LAB luminance correction while preserving hues and avoiding clipping. Apply controlled sharpening without halos.
 
-⚙️ PROCESSING PIPELINE
-🧹 1. CLEANING
-Remove JPEG compression artifacts
-Remove scanning defects
-Remove dust and micro-noise
-Remove scratches
-Remove unwanted background noise
-📐 2. GEOMETRY CORRECTION
-Correct perspective distortion
-Fix skew and alignment
-Ensure repeat boundaries remain intact
-Maintain original proportions
-🎨 3. COLOR & DETAIL ENHANCEMENT
-Restore faded colors (LAB color space preferred)
-Normalize contrast and brightness
-Remove blur
-Apply controlled sharpening
-Preserve fine details and textures
-✏️ 4. EDGE & LINE OPTIMIZATION
-Strengthen line clarity
-Smooth jagged edges
-Maintain natural curves
-Produce crisp, clean boundaries
+Generate exactly four variants:
+1. master_enhanced: naturally restored original palette and texture with balanced contrast and controlled sharpness.
+2. sketch_bw: CAD line drawing containing only black 0 and white 255, with no grayscale, transparency, shading, hatching, gradients, or texture.
+3. color_variant_soft: subtle contrast and color restoration without recoloring.
+4. color_variant_vibrant: moderate contrast and saturation while preserving original color identities and avoiding clipping.
 
-📦 OUTPUT VARIANTS (GENERATE ALL)
-1. MASTER ENHANCED IMAGE
-High-quality processed version of original artwork
-
-2. BLACK & WHITE SKETCH OUTPUT
-Pure black lines on white background
-No grayscale (binary or near-binary)
-High edge accuracy
-Preserve motifs and repeat structure
-Textile CAD-friendly line thickness
-
-3. COLOR VARIANT A (SOFT ENHANCED)
-Natural textile-friendly tones
-Balanced contrast
-Subtle visual improvement
-
-4. COLOR VARIANT B (VIBRANT ENHANCED)
-Rich and enhanced colors
-Higher contrast
-Visually appealing while preserving design
-
-📁 EXPORT REQUIREMENTS
-For ALL outputs:
-Format: BMP and PNG (both required)
-DPI: 600
-BMP: No compression (lossless)
-PNG: Lossless compression
-Quality: Maximum
-Resolution: High (after upscale)
-Background: Clean and uniform
-
-📤 OUTPUT STRUCTURE
-/output/
-   master_enhanced.bmp
-   master_enhanced.png
-   sketch_bw.bmp
-   sketch_bw.png
-   color_variant_soft.bmp
-   color_variant_soft.png
-   color_variant_vibrant.bmp
-   color_variant_vibrant.png"""
+Export each variant independently as uncompressed BMP and lossless PNG at exactly the original pixel dimensions with 600 x 600 DPI metadata and no transparency."""
 
 class TextileCADEngineConfig(BaseModel):
     enabled: bool = Field(default=True, description="Enable Textile CAD Preprocessing Engine")
     prompt: str = Field(default=DEFAULT_CAD_PROMPT, description="Textile CAD Engine Prompt")
     dpi: int = Field(default=600, description="Target DPI resolution for export")
-    generate_six_versions: bool = Field(default=True, description="Generate and export the 6 independent versions")
+    generate_six_versions: bool = Field(default=False, description="Deprecated legacy output switch")
 
 class ProcessConfig(BaseModel):
+    cad_only: bool = Field(
+        default=True,
+        description="Generate only the eight production Texcelle files from the stored uploaded source",
+    )
     cad_engine: TextileCADEngineConfig = Field(default_factory=TextileCADEngineConfig)
     enhance: EnhanceConfig = Field(default_factory=EnhanceConfig)
     background_removal: BackgroundRemovalConfig = Field(default_factory=BackgroundRemovalConfig)

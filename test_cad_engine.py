@@ -38,9 +38,10 @@ def test_cad_preprocessing_engine():
     
     # Configure pipeline settings
     config = ProcessConfig()
+    config.cad_only = True
     config.cad_engine.enabled = True
     config.cad_engine.dpi = 600
-    config.cad_engine.generate_six_versions = True
+    config.cad_engine.generate_six_versions = False
     
     # Disable downstream heavy operations to keep the test fast
     config.background_removal.enabled = False
@@ -78,19 +79,17 @@ def test_cad_preprocessing_engine():
             print(f"{index}. {file:<45} | Size: {file_size_kb:6.2f} KB")
         print("="*50 + "\n")
         
-        # 6 independent versions
         expected_versions = [
-            "version1_balanced_restoration",
-            "version2_maximum_sharpness",
-            "version3_print_optimized",
-            "version4_vectorization_optimized",
-            "version5_repeat_detection_optimized",
-            "version6_texcelle_import_optimized"
+            "master_enhanced",
+            "sketch_bw",
+            "color_variant_soft",
+            "color_variant_vibrant",
         ]
-        
+        assert len(saved_files) == 8, f"Expected exactly 8 outputs, got {len(saved_files)}"
+
         for version in expected_versions:
-            png_name = f"cad_design_sample_{version}.png"
-            bmp_name = f"cad_design_sample_{version}.bmp"
+            png_name = f"{version}.png"
+            bmp_name = f"{version}.bmp"
             
             # Assert file existence
             assert png_name in saved_files, f"Missing PNG for {version}"
@@ -101,9 +100,8 @@ def test_cad_preprocessing_engine():
             
             # Verify image properties
             with Image.open(png_path) as png_img:
-                # Verify Lanczos upscaling (image dimensions should be 1024x1024, scaled from 256x256)
                 w, h = png_img.size
-                assert w == 1024 and h == 1024, f"Expected 1024x1024 for {version}, got {w}x{h}"
+                assert w == 256 and h == 256, f"Expected original 256x256 size for {version}, got {w}x{h}"
                 # Verify DPI
                 dpi = png_img.info.get("dpi")
                 # Pillow might save DPI as a tuple of floats or ints
@@ -112,13 +110,16 @@ def test_cad_preprocessing_engine():
 
             with Image.open(bmp_path) as bmp_img:
                 w, h = bmp_img.size
-                assert w == 1024 and h == 1024, f"Expected 1024x1024 for {version}, got {w}x{h}"
+                assert w == 256 and h == 256, f"Expected original 256x256 size for {version}, got {w}x{h}"
                 # Verify DPI
                 dpi = bmp_img.info.get("dpi")
                 assert dpi is not None, f"DPI is not set for BMP: {version}"
                 assert round(dpi[0]) == 600 and round(dpi[1]) == 600, f"Expected 600 DPI, got {dpi} for BMP: {version}"
-                
-        logger.info("All 6 versions successfully generated in high quality, 600 DPI, lossless formats!")
+
+                if version == "sketch_bw":
+                    assert not any(bmp_img.convert("L").histogram()[1:255])
+
+        logger.info("All 8 Texcelle files generated at original dimensions and 600 DPI!")
         print("CAD PREPROCESSING ENGINE TEST PASSED.")
         
     except Exception as e:

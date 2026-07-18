@@ -6,6 +6,114 @@ from app.models.request_models import OutputGenerationConfig
 from app.services.storage_service import storage_service
 from app.core.logger import logger
 
+REQUIRED_CAD_OUTPUTS = (
+    "master_enhanced",
+    "sketch_bw",
+    "color_variant_soft",
+    "color_variant_vibrant",
+)
+
+
+def _encode_cad_output(
+    image: Image.Image,
+    output_format: str,
+    is_sketch: bool,
+    dpi: int,
+) -> bytes:
+    buffer = io.BytesIO()
+    if is_sketch:
+        export_image = image.convert("L").point(
+            lambda value: 255 if value >= 128 else 0,
+            mode="1" if output_format == "BMP" else "L",
+        )
+    else:
+        export_image = image.convert("RGB")
+
+    save_options = {"format": output_format, "dpi": (dpi, dpi)}
+    if output_format == "PNG":
+        save_options.update({"optimize": True, "compress_level": 9})
+    export_image.save(buffer, **save_options)
+    return buffer.getvalue()
+
+
+def _validate_cad_output(
+    content: bytes,
+    filename: str,
+    expected_size: tuple[int, int],
+    is_sketch: bool,
+    dpi: int,
+) -> None:
+    if filename.endswith(".bmp"):
+        if content[:2] != b"BM":
+            raise ValueError(f"{filename} is not a valid BMP")
+        compression = int.from_bytes(content[30:34], byteorder="little")
+        if compression != 0:
+            raise ValueError(f"{filename} BMP compression must be BI_RGB (0)")
+
+    with Image.open(io.BytesIO(content)) as reopened:
+        reopened.load()
+        if reopened.size != expected_size:
+            raise ValueError(
+                f"{filename} dimensions {reopened.size} do not match source {expected_size}"
+            )
+        exported_dpi = reopened.info.get("dpi")
+        if not exported_dpi or any(round(value) != dpi for value in exported_dpi[:2]):
+            raise ValueError(f"{filename} does not contain {dpi} x {dpi} DPI metadata")
+        if reopened.mode in {"RGBA", "LA"} or "transparency" in reopened.info:
+            raise ValueError(f"{filename} contains transparency")
+        if is_sketch:
+            histogram = reopened.convert("L").histogram()
+            if any(histogram[1:255]):
+                raise ValueError(f"{filename} contains non-binary sketch pixels")
+
+
+def generate_cad_outputs(
+    file_id: str,
+    cad_versions: Dict[str, Image.Image],
+    source_size: tuple[int, int],
+    dpi: int = 600,
+) -> List[str]:
+    """Write and validate exactly the eight production Texcelle files."""
+    missing = [name for name in REQUIRED_CAD_OUTPUTS if name not in cad_versions]
+    if missing:
+        raise ValueError(f"Missing required CAD variants: {', '.join(missing)}")
+
+    output_dir = Path(__file__).resolve().parents[3] / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    saved_files: List[str] = []
+
+    for variant_name in REQUIRED_CAD_OUTPUTS:
+        image = cad_versions[variant_name]
+        if image.size != source_size:
+            raise ValueError(
+                f"{variant_name} dimensions {image.size} do not match source {source_size}"
+            )
+
+        for extension, output_format in (("bmp", "BMP"), ("png", "PNG")):
+            filename = f"{variant_name}.{extension}"
+            content = _encode_cad_output(
+                image=image,
+                output_format=output_format,
+                is_sketch=variant_name == "sketch_bw",
+                dpi=dpi,
+            )
+            _validate_cad_output(
+                content=content,
+                filename=filename,
+                expected_size=source_size,
+                is_sketch=variant_name == "sketch_bw",
+                dpi=dpi,
+            )
+            storage_service.save_file(file_id, filename, content)
+            (output_dir / filename).write_bytes(content)
+            saved_files.append(filename)
+            logger.info(f"Generated and validated CAD output: {filename}")
+
+    if len(saved_files) != 8:
+        raise ValueError(f"Expected exactly 8 CAD outputs, generated {len(saved_files)}")
+    return saved_files
+
+
 def generate_outputs(
     file_id: str,
     original_filename: str,
