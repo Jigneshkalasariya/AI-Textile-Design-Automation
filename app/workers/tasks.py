@@ -80,11 +80,11 @@ def check_queue_task():
         # Find queued assets
         queued_assets = db.query(FileAsset).filter(FileAsset.status == 'QUEUE').all()
         for asset in queued_assets:
-            logger.info(f"Found QUEUE asset: {asset.id} - URL: {asset.cloudinary_url}")
+            logger.info(f"Found QUEUE asset: {asset.id} - URL: {asset.enhanced_cloudinary_url}")
             asset.status = 'PROCESSING'
             db.commit()
             # Trigger celery task for individual asset
-            process_queued_asset.delay(str(asset.id), asset.cloudinary_url)
+            process_queued_asset.delay(str(asset.id), asset.enhanced_cloudinary_url)
     except Exception as e:
         logger.error(f"Error checking queue: {e}")
         db.rollback()
@@ -129,15 +129,23 @@ def process_queued_asset(self, asset_id: str, url: str):
         # Save locally so pipeline can read it
         storage_service.save_file(asset_id, filename, image_data)
         
-        # Run pipeline with fully automated config
-        # We disable background_removal because it destroys textile base colors (like Saree red backgrounds)
-        # We disable cad_engine because perspective warping can ruin border designs
+        # Run pipeline with automated configuration
+        # cad_only=False ensures full 11-step execution and saving of all outputs
         config = ProcessConfig(
+            cad_only=False,
+            cad_engine={"enabled": True, "dpi": 600, "generate_six_versions": False},
             background_removal={"model_name": "sam2", "enabled": False},
             object_detection={"model": "yolo11", "enabled": True},
             inpainting={"enabled": True, "model": "flux"},
             vectorization={"method": "potrace", "enabled": True},
-            cad_engine={"enabled": False, "generate_six_versions": False}
+            color_variants={
+                "enabled": True,
+                "variant_count": 4,
+                "harmony_types": ["complementary", "analogous", "triad", "monochromatic"]
+            },
+            output_generation={
+                "formats": ["PNG", "SVG", "BMP", "TIFF"]
+            }
         )
         
         def progress_callback(progress_percent: float, current_step: str, status_msg: str):
