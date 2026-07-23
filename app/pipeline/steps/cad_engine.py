@@ -221,58 +221,24 @@ def upscale_resolution(cv_img: np.ndarray, target_longer_side: int = 3840) -> np
 
 def generate_bw_sketch(cv_img: np.ndarray) -> np.ndarray:
     """
-    Generates a high-fidelity pure Black & White line sketch of the artwork.
-    Produces pure black lines (0) on a pure white background (255) with no grayscale.
+    Generates figure-based pure Black & White Texcelle sketch of the artwork.
+    Produces COMPLETE filled shapes (0) on a pure white background (255) with no grayscale/outlines.
     """
-    # 1. Convert to grayscale
-    gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY) if len(cv_img.shape) == 3 else cv_img
-    
-    # 2. Smooth to reduce micro-noise and scanning artifacts
-    smoothed = cv2.GaussianBlur(gray, (5, 5), 0)
-    
-    # 3. Adaptive thresholding captures motifs and outlines
-    thresh = cv2.adaptiveThreshold(
-        smoothed, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY, 15, 5
-    )
-    
-    # 4. Canny edge detection captures clear boundaries
-    edges = cv2.Canny(smoothed, 30, 100)
-    edges_inv = cv2.bitwise_not(edges)
-    
-    # 5. Combine both (bitwise AND) to get highly detailed lines and clean boundaries
-    combined = cv2.bitwise_and(thresh, edges_inv)
-    
-    # 6. Morphological cleaning to remove dust and smooth lines
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-    # Median blur to remove salt and pepper noise (isolated pixels)
-    cleaned = cv2.medianBlur(combined, 3)
-    # Thicken lines slightly for Textile CAD compatibility
-    thickened = cv2.erode(cleaned, kernel, iterations=1)
-    
-    # Ensure binary output
-    _, final_bw = cv2.threshold(thickened, 127, 255, cv2.THRESH_BINARY)
-    return final_bw
+    from app.services.cad_textile_engine import TextileCADEngine
+    return TextileCADEngine.generate_figure_bw_texcelle(cv_img)
 
 def preprocess_image_cad(img: Image.Image, config: TextileCADEngineConfig) -> Dict[str, Image.Image]:
     """
-    Generate the four production Texcelle variants from the uploaded source.
+    Generate the production Texcelle variants from the uploaded source.
 
     Every variant starts from the source pixels, and no operation is allowed to
     alter the source canvas dimensions or geometry.
     """
     logger.info("Running Step: Textile CAD Preprocessing Engine")
+    from app.services.cad_textile_engine import TextileCADEngine
 
     source = pil_to_cv2(img.convert("RGB"))
     original_height, original_width = source.shape[:2]
-
-    def clean_source(strength: float) -> np.ndarray:
-        # A small bilateral filter suppresses compression noise while retaining
-        # thin contours. Morphology is intentionally avoided because it can
-        # move or delete legitimate textile details.
-        diameter = 3 if strength <= 1.5 else 5
-        sigma = 8.0 * strength
-        return cv2.bilateralFilter(source.copy(), diameter, sigma, sigma)
 
     def finalize_color(cv_img: np.ndarray) -> Image.Image:
         if cv_img.shape[:2] != (original_height, original_width):
@@ -280,37 +246,30 @@ def preprocess_image_cad(img: Image.Image, config: TextileCADEngineConfig) -> Di
         return cv2_to_pil(cv_img).convert("RGB")
 
     logger.debug("Generating independent CAD output: master_enhanced")
-    master = clean_source(1.5)
-    master = restore_colors(master, sat_scale=1.05, clip_limit=1.35)
-    master = sharpen_image(master, strength=0.35)
+    master = TextileCADEngine.generate_master_clean(source.copy())
 
     logger.debug("Generating independent CAD output: sketch_bw")
-    sketch = generate_bw_sketch(source.copy())
+    sketch = TextileCADEngine.generate_figure_bw_texcelle(source.copy())
     if sketch.shape != (original_height, original_width):
         raise ValueError("Sketch processing changed the source pixel dimensions")
     sketch_pil = Image.fromarray(sketch, mode="L")
-    # Enforce the binary contract even if an upstream OpenCV operation changes.
     sketch_pil = sketch_pil.point(lambda value: 255 if value >= 128 else 0, mode="1")
 
-    logger.debug("Generating independent CAD output: color_variant_soft")
-    soft = clean_source(1.0)
-    soft = restore_colors(soft, sat_scale=1.01, clip_limit=1.15)
-    soft = sharpen_image(soft, strength=0.2)
-
-    logger.debug("Generating independent CAD output: color_variant_vibrant")
-    vibrant = clean_source(1.5)
-    vibrant = restore_colors(vibrant, sat_scale=1.15, clip_limit=1.75)
-    vibrant = sharpen_image(vibrant, strength=0.45)
+    logger.debug("Generating independent CAD colorways")
+    colorways = TextileCADEngine.generate_4_colorway_variants(master)
 
     versions = {
         "master_enhanced": finalize_color(master),
         "sketch_bw": sketch_pil,
-        "color_variant_soft": finalize_color(soft),
-        "color_variant_vibrant": finalize_color(vibrant),
+        "color_variant_soft": finalize_color(colorways["soft"]),
+        "color_variant_vibrant": finalize_color(colorways["vibrant"]),
+        "color_variant_contrast": finalize_color(colorways["contrast"]),
+        "color_variant_mono": finalize_color(colorways["mono"])
     }
     logger.info(
-        f"Generated four Textile CAD variants at original dimensions "
+        f"Generated Textile CAD variants at original dimensions "
         f"{original_width}x{original_height}"
     )
     return versions
+
 

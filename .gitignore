@@ -6,8 +6,6 @@ __pycache__/
 .cache/
 
 # Environments / Secrets
-.env
-.env.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -26,7 +24,6 @@ include/
 share/
 
 # IDE / Editor folders and configuration
-.vscode/
 .idea/
 *.suo
 *.ntvs*
@@ -44,3 +41,5 @@ data/storage/
 # Operating System files
 .DS_Store
 Thumbs.db
+config.bat
+node_modules
