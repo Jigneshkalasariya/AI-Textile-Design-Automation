@@ -132,19 +132,78 @@ def process_queued_asset(self, asset_id: str, url: str):
         # Run pipeline with automated configuration
         # cad_only=False ensures full 11-step execution and saving of all outputs
         config = ProcessConfig(
-            cad_only=False,
-            cad_engine={"enabled": True, "dpi": 600, "generate_six_versions": False},
-            background_removal={"model_name": "sam2", "enabled": False},
-            object_detection={"model": "yolo11", "enabled": True},
-            inpainting={"enabled": True, "model": "flux"},
-            vectorization={"method": "potrace", "enabled": True},
+            cad_only=True,
+            cad_engine={
+                "enabled": True,
+                "prompt": (
+                    "TEXTILE CAD AND TEXCELLE IMAGE PREPROCESSING ENGINE\n\n"
+                    "Process the uploaded textile artwork into production-ready Texcelle files without changing its design identity.\n\n"
+                    "Every output must have exactly the same pixel width, pixel height, aspect ratio, orientation, crop, and canvas boundaries as the uploaded image. Do not upscale, downscale, crop, extend, tile, rotate, or recompose the artwork.\n\n"
+                    "Preserve every motif, flower, leaf, ornament, border, curve, outline, internal line, relative position, spacing, proportion, symmetry, repeat boundary, edge continuity, legitimate background, fine detail, texture, original color identity, and palette relationship.\n\n"
+                    "Never add, invent, remove, regenerate, redesign, stylize, move, duplicate, or hallucinate design content. Never change motif geometry, repeat structure, or legitimate design backgrounds. Do not add grids, labels, watermarks, shadows, frames, or text.\n\n"
+                    "Use the original uploaded image as the independent source for every output. Apply conservative edge-preserving cleaning only to defects that are clearly not artwork. Preserve geometry and canvas dimensions. Restore faded colors with LAB luminance correction while preserving hues and avoiding clipping. Apply controlled sharpening without halos.\n\n"
+                    "Generate exactly four variants:\n"
+                    "1. master_enhanced: naturally restored original palette and texture with balanced contrast and controlled sharpness.\n"
+                    "2. sketch_bw: CAD line drawing containing only black 0 and white 255, with no grayscale, transparency, shading, hatching, gradients, or texture.\n"
+                    "3. color_variant_soft: subtle contrast and color restoration without recoloring.\n"
+                    "4. color_variant_vibrant: moderate contrast and saturation while preserving original color identities and avoiding clipping.\n\n"
+                    "Export each variant independently as uncompressed BMP and lossless PNG at exactly the original pixel dimensions with 600 x 600 DPI metadata and no transparency."
+                ),
+                "dpi": 600,
+                "generate_six_versions": False
+            },
+            enhance={
+                "denoise_strength": 3.0,
+                "sharpen_strength": 1.5,
+                "use_realesrgan": False
+            },
+            background_removal={
+                "enabled": True,
+                "model_name": "sam2",
+                "use_grounding_dino": False,
+                "alpha_matting": False
+            },
+            object_detection={
+                "enabled": True,
+                "model": "yolo11",
+                "confidence": 0.25
+            },
+            pattern_detection={
+                "enabled": True,
+                "search_grid_size": 64
+            },
+            inpainting={
+                "enabled": False,
+                "model": "flux",
+                "prompt": "seamless matching textile pattern fabric",
+                "negative_prompt": "seams, lines, bad quality, blurry",
+                "strength": 0.8
+            },
+            color_separation={
+                "num_colors": 8,
+                "color_space": "LAB"
+            },
+            color_reduction={
+                "palette_size": 8,
+                "dither": True
+            },
+            vectorization={
+                "enabled": True,
+                "method": "potrace",
+                "simplify_tolerance": 1.0
+            },
+            repeat_generation={
+                "repeat_type": "straight",
+                "horizontal_tiles": 3,
+                "vertical_tiles": 3
+            },
             color_variants={
                 "enabled": True,
-                "variant_count": 4,
-                "harmony_types": ["complementary", "analogous", "triad", "monochromatic"]
+                "variant_count": 3,
+                "harmony_types": ["complementary", "analogous", "triad"]
             },
             output_generation={
-                "formats": ["PNG", "SVG", "BMP", "TIFF"]
+                "formats": ["PNG", "SVG"]
             }
         )
         

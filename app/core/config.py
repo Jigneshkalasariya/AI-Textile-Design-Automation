@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     OPENROUTER_MODEL: str = "google/gemini-2.5-flash"
     OPENROUTER_MAX_TOKENS: int = 4096
 
+    # Gemini Settings
+    GEMINI_API_KEY: str = ""
+
     # Database Settings
     DATABASE_URL: str
 
